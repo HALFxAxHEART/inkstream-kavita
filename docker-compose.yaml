@@ -7,7 +7,7 @@ services:
     ports:
       - "5000"
     volumes:
-      - suwayomi-data:/suwayomi-data:ro
+      - /var/lib/docker/volumes/kg8wow0ks0cwo04kco0884cw_suwayomi-data/_data:/suwayomi-data:ro
       - kavita-config:/kavita/config
     networks:
       - coolify
@@ -29,9 +29,6 @@ services:
       - "traefik.http.services.kavita-svc.loadbalancer.server.port=5000"
 
 volumes:
-  suwayomi-data:
-    external: true
-    name: kg8wow0ks0cwo04kco0884cw_suwayomi-data
   kavita-config:
 
 networks:
