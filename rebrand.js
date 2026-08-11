@@ -39,25 +39,62 @@
   });
 
   // Kavita has no concept of browsing/searching source sites (Asura Scans,
-  // Webtoons, etc.) - that only exists in the old app. Rather than depend on
-  // Kavita's internal Angular DOM structure (fragile, breaks on updates), add
-  // a standalone floating link to it that works regardless of Kavita's markup.
+  // Webtoons, etc.) - that only exists in the old app (Suwayomi). Rather than
+  // depend on Kavita's internal Angular DOM structure (fragile, breaks on
+  // updates), add a standalone floating button that opens the old app in an
+  // in-page overlay panel (iframe), so it feels like part of this app instead
+  // of navigating away to a separate site.
   function addDiscoverButton() {
     if (document.getElementById('inkstream-discover-btn')) return;
-    var a = document.createElement('a');
-    a.id = 'inkstream-discover-btn';
-    a.href = 'https://discover.stapulasolutions.com';
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.textContent = '+ Discover New Series';
-    a.style.cssText = [
+
+    var btn = document.createElement('button');
+    btn.id = 'inkstream-discover-btn';
+    btn.textContent = '+ Discover New Series';
+    btn.style.cssText = [
       'position:fixed', 'right:1.25rem', 'bottom:1.25rem', 'z-index:9999',
       'background:linear-gradient(135deg,#3060ad,#b64499)', 'color:#fff',
-      'padding:.75rem 1.1rem', 'border-radius:2rem', 'font-family:sans-serif',
-      'font-size:.9rem', 'font-weight:600', 'text-decoration:none',
+      'padding:.75rem 1.1rem', 'border:none', 'border-radius:2rem',
+      'font-family:sans-serif', 'font-size:.9rem', 'font-weight:600',
       'box-shadow:0 .25rem .75rem rgba(0,0,0,.4)', 'cursor:pointer'
     ].join(';');
-    document.body.appendChild(a);
+
+    var overlay = document.createElement('div');
+    overlay.id = 'inkstream-discover-overlay';
+    overlay.style.cssText = [
+      'display:none', 'position:fixed', 'inset:0', 'z-index:10000',
+      'background:#16191f'
+    ].join(';');
+
+    var closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕ Close Discover';
+    closeBtn.style.cssText = [
+      'position:absolute', 'top:.75rem', 'right:.75rem', 'z-index:10001',
+      'background:linear-gradient(135deg,#3060ad,#b64499)', 'color:#fff',
+      'border:none', 'border-radius:1.5rem', 'padding:.6rem 1rem',
+      'font-family:sans-serif', 'font-size:.85rem', 'font-weight:600',
+      'box-shadow:0 .2rem .5rem rgba(0,0,0,.4)', 'cursor:pointer'
+    ].join(';');
+
+    var iframe = document.createElement('iframe');
+    iframe.title = 'Discover New Series';
+    iframe.style.cssText = 'width:100%;height:100%;border:0;';
+    // Lazy-load the iframe src on first open so it doesn't load on every page.
+
+    function open() {
+      if (!iframe.src) iframe.src = 'https://discover.stapulasolutions.com';
+      overlay.style.display = 'block';
+    }
+    function close() {
+      overlay.style.display = 'none';
+    }
+
+    btn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+
+    overlay.appendChild(closeBtn);
+    overlay.appendChild(iframe);
+    document.body.appendChild(btn);
+    document.body.appendChild(overlay);
   }
 
   function start() {
