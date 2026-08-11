@@ -1,6 +1,8 @@
 services:
   kavita:
-    image: jvmilazz0/kavita:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     mem_limit: 768m
     ports:
       - "5000"
