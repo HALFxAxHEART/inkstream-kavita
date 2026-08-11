@@ -38,9 +38,32 @@
     }
   });
 
+  // Kavita has no concept of browsing/searching source sites (Asura Scans,
+  // Webtoons, etc.) - that only exists in the old app. Rather than depend on
+  // Kavita's internal Angular DOM structure (fragile, breaks on updates), add
+  // a standalone floating link to it that works regardless of Kavita's markup.
+  function addDiscoverButton() {
+    if (document.getElementById('inkstream-discover-btn')) return;
+    var a = document.createElement('a');
+    a.id = 'inkstream-discover-btn';
+    a.href = 'https://discover.stapulasolutions.com';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = '+ Discover New Series';
+    a.style.cssText = [
+      'position:fixed', 'right:1.25rem', 'bottom:1.25rem', 'z-index:9999',
+      'background:linear-gradient(135deg,#3060ad,#b64499)', 'color:#fff',
+      'padding:.75rem 1.1rem', 'border-radius:2rem', 'font-family:sans-serif',
+      'font-size:.9rem', 'font-weight:600', 'text-decoration:none',
+      'box-shadow:0 .25rem .75rem rgba(0,0,0,.4)', 'cursor:pointer'
+    ].join(';');
+    document.body.appendChild(a);
+  }
+
   function start() {
     fixTextNodes(document.body);
     bodyObserver.observe(document.body, { childList: true, subtree: true });
+    addDiscoverButton();
   }
 
   if (document.body) start();
