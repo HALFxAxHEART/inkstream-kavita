@@ -1,10 +1,14 @@
 /* InkStream custom theme overrides — tuned toward the old app's look */
 :root {
-  /* Primary accent: blue instead of Kavita's stock teal-green */
-  --primary-color: #2196f3;
-  --primary-color-dark-shade: #1976d2;
-  --primary-color-darker-shade: #1565c0;
-  --primary-color-darkest-shade: #0d47a1;
+  /* Primary accent: MUI's classic stock indigo, which is what an
+     un-customized Material-UI app (the old app) ships with by default */
+  --primary-color: #3f51b5;
+  --primary-color-dark-shade: #303f9f;
+  --primary-color-darker-shade: #283593;
+  --primary-color-darkest-shade: #1a237e;
+
+  /* Secondary accent: MUI's stock pink/purple, used for hover/active highlights */
+  --secondary-accent-color: #f50057;
 
   /* Nav bar + side nav */
   --navbar-bg-color: #14181f;
@@ -13,9 +17,9 @@
   --side-nav-bg-color: #14181f;
   --side-nav-text-color: rgba(232, 234, 237, 0.85);
   --side-nav-header-text-color: #ffffff;
-  --side-nav-hover-bg-color: rgba(33, 150, 243, 0.15);
+  --side-nav-hover-bg-color: rgba(245, 0, 87, 0.12);
   --side-nav-hover-text-color: #ffffff;
-  --side-nav-item-active-color: var(--primary-color);
+  --side-nav-item-active-color: var(--secondary-accent-color);
   --side-nav-item-active-text-color: #ffffff;
 
   /* Library grid cards - slightly larger, more square covers */
@@ -26,4 +30,10 @@
 
   /* Overall page background, closer to the old app's near-black */
   --bs-body-bg: #16191f;
+
+  /* A few extra spots that don't derive from --primary-color */
+  --review-card-star-color: var(--secondary-accent-color);
+  --rating-star-color: var(--secondary-accent-color);
+  --ratingstar-star-filled: var(--secondary-accent-color);
+  --login-card-border-color: var(--secondary-accent-color);
 }
