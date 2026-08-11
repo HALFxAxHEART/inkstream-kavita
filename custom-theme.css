@@ -1,14 +1,13 @@
 /* InkStream custom theme overrides — tuned toward the old app's look */
 :root {
-  /* Primary accent: MUI's classic stock indigo, which is what an
-     un-customized Material-UI app (the old app) ships with by default */
-  --primary-color: #3f51b5;
-  --primary-color-dark-shade: #303f9f;
-  --primary-color-darker-shade: #283593;
-  --primary-color-darkest-shade: #1a237e;
+  /* Colors pulled directly from the InkStream logo */
+  --primary-color: #3060ad;
+  --primary-color-dark-shade: #285193;
+  --primary-color-darker-shade: #214379;
+  --primary-color-darkest-shade: #1a345f;
 
-  /* Secondary accent: MUI's stock pink/purple, used for hover/active highlights */
-  --secondary-accent-color: #f50057;
+  /* Secondary accent: the logo's magenta/purple, used for hover/active highlights */
+  --secondary-accent-color: #b64499;
 
   /* Nav bar + side nav */
   --navbar-bg-color: #14181f;
@@ -17,7 +16,7 @@
   --side-nav-bg-color: #14181f;
   --side-nav-text-color: rgba(232, 234, 237, 0.85);
   --side-nav-header-text-color: #ffffff;
-  --side-nav-hover-bg-color: rgba(245, 0, 87, 0.12);
+  --side-nav-hover-bg-color: rgba(182, 68, 153, 0.15);
   --side-nav-hover-text-color: #ffffff;
   --side-nav-item-active-color: var(--secondary-accent-color);
   --side-nav-item-active-text-color: #ffffff;
