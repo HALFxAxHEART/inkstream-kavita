@@ -35,4 +35,12 @@
   --rating-star-color: var(--secondary-accent-color);
   --ratingstar-star-filled: var(--secondary-accent-color);
   --login-card-border-color: var(--secondary-accent-color);
+
+  /* Bootstrap's default "success" green shows up on badges/indicators
+     independent of --primary-color - neutralize it to the brand palette */
+  --bs-success: var(--secondary-accent-color);
+  --bs-success-rgb: 182, 68, 153;
+  --bs-success-text-emphasis: var(--secondary-accent-color);
+  --bs-success-bg-subtle: rgba(182, 68, 153, .15);
+  --bs-success-border-subtle: rgba(182, 68, 153, .35);
 }
