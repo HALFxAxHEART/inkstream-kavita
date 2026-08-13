@@ -50,14 +50,13 @@
     return p === '' || p === '/home';
   }
 
-  function addDiscoverButton() {
-    if (document.getElementById('inkstream-discover-btn')) return null;
+  function makeFloatingLink(id, href, text, bottomRem) {
     var a = document.createElement('a');
-    a.id = 'inkstream-discover-btn';
-    a.href = '/discover';
-    a.textContent = '+ Discover New Series';
+    a.id = id;
+    a.href = href;
+    a.textContent = text;
     a.style.cssText = [
-      'position:fixed', 'right:1.25rem', 'bottom:1.25rem', 'z-index:9999',
+      'position:fixed', 'right:1.25rem', 'bottom:' + bottomRem + 'rem', 'z-index:9999',
       'background:linear-gradient(135deg,#3060ad,#b64499)', 'color:#fff',
       'padding:.75rem 1.1rem', 'border-radius:2rem', 'font-family:sans-serif',
       'font-size:.9rem', 'font-weight:600', 'text-decoration:none',
@@ -67,30 +66,39 @@
     return a;
   }
 
-  function updateDiscoverButtonVisibility() {
-    var btn = document.getElementById('inkstream-discover-btn') || addDiscoverButton();
-    btn.style.display = isMainPage() ? '' : 'none';
+  function addDiscoverButton() {
+    return document.getElementById('inkstream-discover-btn') ||
+      makeFloatingLink('inkstream-discover-btn', '/discover', '+ Discover New Series', 1.25);
   }
 
-  function watchRouteChanges(onChange) {
-    var origPushState = history.pushState;
-    var origReplaceState = history.replaceState;
-    history.pushState = function () {
-      origPushState.apply(this, arguments);
-      onChange();
-    };
-    history.replaceState = function () {
-      origReplaceState.apply(this, arguments);
-      onChange();
-    };
-    window.addEventListener('popstate', onChange);
+  function addGridButton() {
+    return document.getElementById('inkstream-grid-btn') ||
+      makeFloatingLink('inkstream-grid-btn', '/grid', '📚 My Library', 4.5);
+  }
+
+  function updateDiscoverButtonVisibility() {
+    var discoverBtn = addDiscoverButton();
+    var gridBtn = addGridButton();
+    var display = isMainPage() ? '' : 'none';
+    discoverBtn.style.display = display;
+    gridBtn.style.display = display;
   }
 
   function start() {
     fixTextNodes(document.body);
     bodyObserver.observe(document.body, { childList: true, subtree: true });
+    // Hooking history.pushState/replaceState didn't reliably catch Kavita's
+    // route changes (likely using the newer Navigation API in some
+    // browsers, which bypasses pushState entirely) - polling the URL is
+    // crude but can't be missed regardless of how Kavita navigates.
+    var lastPath = null;
+    setInterval(function () {
+      if (location.pathname !== lastPath) {
+        lastPath = location.pathname;
+        updateDiscoverButtonVisibility();
+      }
+    }, 300);
     updateDiscoverButtonVisibility();
-    watchRouteChanges(updateDiscoverButtonVisibility);
   }
 
   if (document.body) start();
