@@ -71,17 +71,34 @@
       makeFloatingLink('inkstream-discover-btn', '/discover', '+ Discover New Series', 1.25);
   }
 
-  function addGridButton() {
-    return document.getElementById('inkstream-grid-btn') ||
-      makeFloatingLink('inkstream-grid-btn', '/grid', '📚 My Library', 4.5);
-  }
-
   function updateDiscoverButtonVisibility() {
     var discoverBtn = addDiscoverButton();
-    var gridBtn = addGridButton();
-    var display = isMainPage() ? '' : 'none';
-    discoverBtn.style.display = display;
-    gridBtn.style.display = display;
+    discoverBtn.style.display = isMainPage() ? '' : 'none';
+  }
+
+  // Add "My Library" as a real, permanent item in Kavita's own sidebar
+  // (not a floating button) - matches the structure Kavita's own
+  // app-side-nav-item component renders, so it looks native.
+  function addGridSidebarLink() {
+    if (document.getElementById('inkstream-grid-nav-item')) return;
+    var sideNav = document.querySelector('.side-nav');
+    if (!sideNav) return;
+
+    var a = document.createElement('a');
+    a.id = 'inkstream-grid-nav-item';
+    a.className = 'side-nav-item';
+    a.href = '/grid';
+    a.innerHTML =
+      '<div class="active-highlight"></div>' +
+      '<span class="phone-hidden" title="My Library"><div><i class="fa fa-table-cells" aria-hidden="true"></i></div></span>' +
+      '<span class="side-nav-text"><div>My Library</div></span>';
+
+    var homeItem = sideNav.querySelector('a[href="/home/"], a[href="/home"]');
+    if (homeItem && homeItem.nextSibling) {
+      sideNav.insertBefore(a, homeItem.nextSibling);
+    } else {
+      sideNav.insertBefore(a, sideNav.firstChild);
+    }
   }
 
   function start() {
@@ -89,16 +106,19 @@
     bodyObserver.observe(document.body, { childList: true, subtree: true });
     // Hooking history.pushState/replaceState didn't reliably catch Kavita's
     // route changes (likely using the newer Navigation API in some
-    // browsers, which bypasses pushState entirely) - polling the URL is
-    // crude but can't be missed regardless of how Kavita navigates.
+    // browsers, which bypasses pushState entirely) - polling is crude but
+    // can't be missed regardless of how Kavita navigates. Same poll also
+    // re-adds the sidebar link if Angular's own re-render ever drops it.
     var lastPath = null;
     setInterval(function () {
+      addGridSidebarLink();
       if (location.pathname !== lastPath) {
         lastPath = location.pathname;
         updateDiscoverButtonVisibility();
       }
     }, 300);
     updateDiscoverButtonVisibility();
+    addGridSidebarLink();
   }
 
   if (document.body) start();
