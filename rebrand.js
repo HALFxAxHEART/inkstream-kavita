@@ -41,9 +41,17 @@
   // Kavita has no concept of browsing/searching source sites (Asura Scans,
   // Webtoons, etc.) - that's handled by discover-app, a small page built to
   // match InkStream's own branding, served at /discover on this SAME domain
-  // (not a separate site/iframe) via Traefik path routing.
+  // (not a separate site/iframe) via Traefik path routing. Only shown on the
+  // main/home page ('' and 'libraries' both redirect to 'home' per Kavita's
+  // own routing config) - Kavita is a single-page app, so route changes don't
+  // reload this script; visibility has to be re-checked on every navigation.
+  function isMainPage() {
+    var p = location.pathname.replace(/\/+$/, '');
+    return p === '' || p === '/home';
+  }
+
   function addDiscoverButton() {
-    if (document.getElementById('inkstream-discover-btn')) return;
+    if (document.getElementById('inkstream-discover-btn')) return null;
     var a = document.createElement('a');
     a.id = 'inkstream-discover-btn';
     a.href = '/discover';
@@ -56,12 +64,33 @@
       'box-shadow:0 .25rem .75rem rgba(0,0,0,.4)', 'cursor:pointer'
     ].join(';');
     document.body.appendChild(a);
+    return a;
+  }
+
+  function updateDiscoverButtonVisibility() {
+    var btn = document.getElementById('inkstream-discover-btn') || addDiscoverButton();
+    btn.style.display = isMainPage() ? '' : 'none';
+  }
+
+  function watchRouteChanges(onChange) {
+    var origPushState = history.pushState;
+    var origReplaceState = history.replaceState;
+    history.pushState = function () {
+      origPushState.apply(this, arguments);
+      onChange();
+    };
+    history.replaceState = function () {
+      origReplaceState.apply(this, arguments);
+      onChange();
+    };
+    window.addEventListener('popstate', onChange);
   }
 
   function start() {
     fixTextNodes(document.body);
     bodyObserver.observe(document.body, { childList: true, subtree: true });
-    addDiscoverButton();
+    updateDiscoverButtonVisibility();
+    watchRouteChanges(updateDiscoverButtonVisibility);
   }
 
   if (document.body) start();
