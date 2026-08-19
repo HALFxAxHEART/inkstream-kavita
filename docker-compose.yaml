@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    security_opt:
+      - seccomp:unconfined
     mem_limit: 768m
     ports:
       - "5000"
