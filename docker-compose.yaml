@@ -9,7 +9,12 @@ services:
     ports:
       - "5000"
     volumes:
-      - /var/lib/docker/volumes/lvdyq965xfop7zlq267odq0p_suwayomi-data/_data:/suwayomi-data:ro
+      - type: bind
+        source: /var/lib/docker/volumes/lvdyq965xfop7zlq267odq0p_suwayomi-data/_data
+        target: /suwayomi-data
+        read_only: true
+        bind:
+          propagation: rprivate
       - kavita-config:/kavita/config
     networks:
       - coolify
