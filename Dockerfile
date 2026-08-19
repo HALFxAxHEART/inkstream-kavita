@@ -1,4 +1,4 @@
-FROM jvmilazz0/kavita:latest
+FROM jvmilazz0/kavita:0.8.7
 
 COPY custom-theme.css /kavita/wwwroot/custom-theme.css
 COPY rebrand.js /kavita/wwwroot/rebrand.js
