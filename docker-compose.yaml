@@ -9,7 +9,7 @@ services:
     ports:
       - "5000"
     volumes:
-      - /var/lib/docker/volumes/lvdyq965xfop7zlq267odq0p_suwayomi-data/_data:/suwayomi-data:ro
+      - suwayomi-data:/suwayomi-data:ro
       - kavita-config:/kavita/config
     networks:
       - coolify
@@ -32,6 +32,9 @@ services:
 
 volumes:
   kavita-config:
+  suwayomi-data:
+    external: true
+    name: lvdyq965xfop7zlq267odq0p_suwayomi-data
 
 networks:
   coolify:
