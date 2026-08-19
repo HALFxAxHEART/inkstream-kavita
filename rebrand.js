@@ -93,11 +93,24 @@
       '<span class="phone-hidden" title="My Library"><div><i class="fa fa-table-cells" aria-hidden="true"></i></div></span>' +
       '<span class="side-nav-text"><div>My Library</div></span>';
 
-    var homeItem = sideNav.querySelector('a[href="/home/"], a[href="/home"]');
-    if (homeItem && homeItem.nextSibling) {
-      sideNav.insertBefore(a, homeItem.nextSibling);
-    } else {
-      sideNav.insertBefore(a, sideNav.firstChild);
+    // Kavita 0.8.7 nests nav items below .side-nav, so homeItem.nextSibling
+    // is NOT a child of .side-nav - insert into homeItem's ACTUAL parent, and
+    // guard everything so a DOM mismatch can never throw (a throw here would
+    // also block the Discover button, which runs after this in the poll).
+    try {
+      var homeItem = sideNav.querySelector('a[href="/home/"], a[href="/home"]');
+      if (homeItem && homeItem.parentNode) {
+        homeItem.parentNode.insertBefore(a, homeItem.nextSibling);
+      } else {
+        var anyItem = sideNav.querySelector('a.side-nav-item');
+        if (anyItem && anyItem.parentNode) {
+          anyItem.parentNode.insertBefore(a, anyItem.nextSibling);
+        } else {
+          sideNav.appendChild(a);
+        }
+      }
+    } catch (e) {
+      try { sideNav.appendChild(a); } catch (e2) {}
     }
   }
 
@@ -111,7 +124,7 @@
     // re-adds the sidebar link if Angular's own re-render ever drops it.
     var lastPath = null;
     setInterval(function () {
-      addGridSidebarLink();
+      try { addGridSidebarLink(); } catch (e) {}
       if (location.pathname !== lastPath) {
         lastPath = location.pathname;
         updateDiscoverButtonVisibility();
