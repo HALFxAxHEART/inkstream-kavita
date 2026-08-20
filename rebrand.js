@@ -101,6 +101,26 @@
     }
   }
 
+  // Series detail pages list chapters oldest-first inside an Angular
+  // virtual-scroller, with no built-in reverse/sort toggle - reversing the
+  // DOM order would fight the virtual-scroller's internal positioning, so
+  // instead we jump the page's real scroll container (.companion-bar, the
+  // same element the browser's own scrollbar drives - confirmed via direct
+  // testing) to the bottom whenever the "Chapter" tab becomes active, so the
+  // newest chapter is on screen immediately instead of requiring a scroll.
+  function isChapterTabActive() {
+    var chapterTab = Array.prototype.find.call(
+      document.querySelectorAll('a[role="tab"]'),
+      function (a) { return /^\s*Chapter\b/.test(a.textContent); },
+    );
+    return !!(chapterTab && chapterTab.getAttribute('aria-selected') === 'true');
+  }
+
+  function scrollToNewestChapter() {
+    var scroller = document.querySelector('.companion-bar');
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+  }
+
   function start() {
     fixTextNodes(document.body);
     bodyObserver.observe(document.body, { childList: true, subtree: true });
@@ -110,12 +130,19 @@
     // can't be missed regardless of how Kavita navigates. Same poll also
     // re-adds the sidebar link if Angular's own re-render ever drops it.
     var lastPath = null;
+    var wasChapterTabActive = false;
     setInterval(function () {
       addGridSidebarLink();
       if (location.pathname !== lastPath) {
         lastPath = location.pathname;
         updateDiscoverButtonVisibility();
       }
+      var chapterTabActive = isChapterTabActive();
+      if (chapterTabActive && !wasChapterTabActive) {
+        scrollToNewestChapter();
+        setTimeout(scrollToNewestChapter, 500);
+      }
+      wasChapterTabActive = chapterTabActive;
     }, 300);
     updateDiscoverButtonVisibility();
     addGridSidebarLink();
