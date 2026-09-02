@@ -134,6 +134,113 @@
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
 
+  // Chat assistant: floating button + panel, wired to a small locked-down
+  // backend (inkstream-assistant) that can only search the library/sources
+  // and add a title - never delete/edit anything. Reuses Kavita's own login
+  // (the token it already stores in localStorage under "kavita-user") so the
+  // assistant isn't reachable by anyone who isn't already a logged-in user.
+  var ASSISTANT_URL = 'https://inkstream-assistant.stapulasolutions.com';
+  var chatHistory = [];
+
+  function getKavitaToken() {
+    try {
+      var raw = localStorage.getItem('kavita-user');
+      if (!raw) return null;
+      return JSON.parse(raw).token || null;
+    } catch (e) { return null; }
+  }
+
+  function addChatWidget() {
+    if (document.getElementById('inkstream-chat-btn')) return;
+
+    var btn = document.createElement('button');
+    btn.id = 'inkstream-chat-btn';
+    btn.setAttribute('aria-label', 'Chat with the library assistant');
+    btn.textContent = '💬';
+    btn.style.cssText = [
+      'position:fixed', 'left:1.25rem', 'bottom:1.25rem', 'z-index:9999',
+      'width:3.25rem', 'height:3.25rem', 'border-radius:50%', 'border:none',
+      'background:linear-gradient(135deg,#3060ad,#b64499)', 'color:#fff',
+      'font-size:1.4rem', 'cursor:pointer', 'box-shadow:0 .25rem .75rem rgba(0,0,0,.4)'
+    ].join(';');
+
+    var panel = document.createElement('div');
+    panel.id = 'inkstream-chat-panel';
+    panel.style.cssText = [
+      'position:fixed', 'left:1.25rem', 'bottom:5rem', 'z-index:9999',
+      'width:min(22rem,90vw)', 'height:min(28rem,70vh)', 'display:none',
+      'flex-direction:column', 'background:#202122', 'color:#efefef',
+      'border-radius:.75rem', 'overflow:hidden', 'box-shadow:0 .5rem 2rem rgba(0,0,0,.5)',
+      'font-family:sans-serif', 'font-size:.85rem'
+    ].join(';');
+    panel.innerHTML =
+      '<div style="padding:.75rem 1rem;background:linear-gradient(135deg,#3060ad,#b64499);font-weight:600">' +
+        'Find something to read' +
+      '</div>' +
+      '<div id="inkstream-chat-log" style="flex:1;overflow-y:auto;padding:.75rem;display:flex;flex-direction:column;gap:.5rem"></div>' +
+      '<form id="inkstream-chat-form" style="display:flex;border-top:1px solid rgba(255,255,255,.1)">' +
+        '<input id="inkstream-chat-input" placeholder="Looking for a story..." autocomplete="off" ' +
+          'style="flex:1;padding:.6rem;border:none;background:#353535;color:#fff" />' +
+        '<button type="submit" style="padding:.6rem .9rem;border:none;background:#3060ad;color:#fff;cursor:pointer">Send</button>' +
+      '</form>';
+
+    document.body.appendChild(btn);
+    document.body.appendChild(panel);
+
+    btn.addEventListener('click', function () {
+      panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    });
+
+    function addBubble(text, who) {
+      var log = document.getElementById('inkstream-chat-log');
+      var b = document.createElement('div');
+      b.textContent = text;
+      b.style.cssText = [
+        'max-width:85%', 'padding:.5rem .75rem', 'border-radius:.75rem', 'white-space:pre-wrap',
+        who === 'user'
+          ? 'align-self:flex-end;background:#3060ad;color:#fff'
+          : 'align-self:flex-start;background:#353535;color:#efefef'
+      ].join(';');
+      log.appendChild(b);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    panel.querySelector('#inkstream-chat-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var input = document.getElementById('inkstream-chat-input');
+      var text = input.value.trim();
+      if (!text) return;
+      var token = getKavitaToken();
+      if (!token) {
+        addBubble('Please log in first.', 'assistant');
+        return;
+      }
+      input.value = '';
+      addBubble(text, 'user');
+      chatHistory.push({ role: 'user', content: text });
+      addBubble('...', 'assistant-pending');
+
+      fetch(ASSISTANT_URL + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ message: text, history: chatHistory.slice(0, -1) })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var pending = document.querySelector('#inkstream-chat-log div:last-child');
+          if (pending && pending.textContent === '...') pending.remove();
+          var reply = data.reply || data.error || 'Something went wrong, try again.';
+          addBubble(reply, 'assistant');
+          chatHistory.push({ role: 'assistant', content: reply });
+        })
+        .catch(function () {
+          var pending = document.querySelector('#inkstream-chat-log div:last-child');
+          if (pending && pending.textContent === '...') pending.remove();
+          addBubble('Assistant is unavailable right now.', 'assistant');
+        });
+    });
+  }
+
   function start() {
     fixTextNodes(document.body);
     bodyObserver.observe(document.body, { childList: true, subtree: true });
@@ -146,6 +253,7 @@
     var wasChapterTabActive = false;
     setInterval(function () {
       try { addGridSidebarLink(); } catch (e) {}
+      try { addChatWidget(); } catch (e) {}
       if (location.pathname !== lastPath) {
         lastPath = location.pathname;
         updateDiscoverButtonVisibility();
@@ -159,6 +267,7 @@
     }, 300);
     updateDiscoverButtonVisibility();
     addGridSidebarLink();
+    addChatWidget();
   }
 
   if (document.body) start();
