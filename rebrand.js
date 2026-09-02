@@ -184,8 +184,11 @@
       log.scrollTop = log.scrollHeight;
     }
 
+    var requestInFlight = false;
+
     panel.querySelector('#inkstream-chat-form').addEventListener('submit', function (e) {
       e.preventDefault();
+      if (requestInFlight) return;
       var input = document.getElementById('inkstream-chat-input');
       var text = input.value.trim();
       if (!text) return;
@@ -195,6 +198,9 @@
         return;
       }
       input.value = '';
+      requestInFlight = true;
+      input.disabled = true;
+      panel.querySelector('#inkstream-chat-form button[type="submit"]').disabled = true;
       addBubble(text, 'user');
 
       // Status bubble shows real progress from the server (streamed, not a
@@ -271,6 +277,12 @@
           var el = document.getElementById('inkstream-chat-status');
           if (el) el.remove();
           if (!replyText) addBubble('Assistant is unavailable right now.', 'assistant');
+        })
+        .finally(function () {
+          requestInFlight = false;
+          input.disabled = false;
+          panel.querySelector('#inkstream-chat-form button[type="submit"]').disabled = false;
+          input.focus();
         });
     });
   }
