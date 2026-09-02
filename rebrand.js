@@ -38,42 +38,13 @@
     }
   });
 
-  // Kavita has no concept of browsing/searching source sites (Asura Scans,
-  // Webtoons, etc.) - that's handled by discover-app, a small page built to
-  // match InkStream's own branding, served at /discover on this SAME domain
-  // (not a separate site/iframe) via Traefik path routing. Only shown on the
-  // main/home page ('' and 'libraries' both redirect to 'home' per Kavita's
-  // own routing config) - Kavita is a single-page app, so route changes don't
-  // reload this script; visibility has to be re-checked on every navigation.
-  function isMainPage() {
-    var p = location.pathname.replace(/\/+$/, '');
-    return p === '' || p === '/home';
-  }
-
-  function makeFloatingLink(id, href, text, bottomRem) {
-    var a = document.createElement('a');
-    a.id = id;
-    a.href = href;
-    a.textContent = text;
-    a.style.cssText = [
-      'position:fixed', 'right:1.25rem', 'bottom:' + bottomRem + 'rem', 'z-index:9999',
-      'background:linear-gradient(135deg,#3060ad,#b64499)', 'color:#fff',
-      'padding:.75rem 1.1rem', 'border-radius:2rem', 'font-family:sans-serif',
-      'font-size:.9rem', 'font-weight:600', 'text-decoration:none',
-      'box-shadow:0 .25rem .75rem rgba(0,0,0,.4)', 'cursor:pointer'
-    ].join(';');
-    document.body.appendChild(a);
-    return a;
-  }
-
-  function addDiscoverButton() {
-    return document.getElementById('inkstream-discover-btn') ||
-      makeFloatingLink('inkstream-discover-btn', '/discover', '+ Discover New Series', 1.25);
-  }
-
-  function updateDiscoverButtonVisibility() {
-    var discoverBtn = addDiscoverButton();
-    discoverBtn.style.display = isMainPage() ? '' : 'none';
+  // Single Discover entry point, shown on every page EXCEPT the "My
+  // Library" grid (/grid) - that page IS the library, so a "find something"
+  // button there is redundant/confusing. Kavita is a single-page app, so
+  // route changes don't reload this script; visibility is re-checked on
+  // every navigation via the poll in start().
+  function isLibraryPage() {
+    return location.pathname.replace(/\/+$/, '').indexOf('/grid') === 0;
   }
 
   // Add "My Library" as a real, permanent item in Kavita's own sidebar
@@ -134,11 +105,16 @@
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
 
-  // Chat assistant: floating button + panel, wired to a small locked-down
-  // backend (inkstream-assistant) that can only search the library/sources
-  // and add a title - never delete/edit anything. Reuses Kavita's own login
-  // (the token it already stores in localStorage under "kavita-user") so the
-  // assistant isn't reachable by anyone who isn't already a logged-in user.
+  // Discover / chat assistant: ONE floating button + panel, wired to a small
+  // locked-down backend (inkstream-assistant) that can only search the
+  // library/sources and add a title - never delete/edit anything. Reuses
+  // Kavita's own login (the token it already stores in localStorage under
+  // "kavita-user") so the assistant isn't reachable by anyone who isn't
+  // already a logged-in user. This replaced two separate floating buttons
+  // (a plain "+ Discover New Series" link and a chat bubble) - the backend
+  // itself always checks the existing library before reaching for the AI
+  // source search, so this one button covers both "is it here" and "find it
+  // for me" without the user needing to pick which button to press.
   var ASSISTANT_URL = 'https://inkstream-assistant.stapulasolutions.com';
   var chatHistory = [];
 
@@ -155,19 +131,20 @@
 
     var btn = document.createElement('button');
     btn.id = 'inkstream-chat-btn';
-    btn.setAttribute('aria-label', 'Chat with the library assistant');
-    btn.textContent = '💬';
+    btn.setAttribute('aria-label', 'Discover - find or add a story');
+    btn.innerHTML = '&#128269; Discover';
     btn.style.cssText = [
-      'position:fixed', 'left:1.25rem', 'bottom:1.25rem', 'z-index:9999',
-      'width:3.25rem', 'height:3.25rem', 'border-radius:50%', 'border:none',
-      'background:linear-gradient(135deg,#3060ad,#b64499)', 'color:#fff',
-      'font-size:1.4rem', 'cursor:pointer', 'box-shadow:0 .25rem .75rem rgba(0,0,0,.4)'
+      'position:fixed', 'right:1.25rem', 'bottom:1.25rem', 'z-index:9999',
+      'border:none', 'background:linear-gradient(135deg,#3060ad,#b64499)', 'color:#fff',
+      'padding:.75rem 1.1rem', 'border-radius:2rem', 'font-family:sans-serif',
+      'font-size:.9rem', 'font-weight:600',
+      'box-shadow:0 .25rem .75rem rgba(0,0,0,.4)', 'cursor:pointer'
     ].join(';');
 
     var panel = document.createElement('div');
     panel.id = 'inkstream-chat-panel';
     panel.style.cssText = [
-      'position:fixed', 'left:1.25rem', 'bottom:5rem', 'z-index:9999',
+      'position:fixed', 'right:1.25rem', 'bottom:5rem', 'z-index:9999',
       'width:min(22rem,90vw)', 'height:min(28rem,70vh)', 'display:none',
       'flex-direction:column', 'background:#202122', 'color:#efefef',
       'border-radius:.75rem', 'overflow:hidden', 'box-shadow:0 .5rem 2rem rgba(0,0,0,.5)',
@@ -241,6 +218,15 @@
     });
   }
 
+  function updateChatWidgetVisibility() {
+    var btn = document.getElementById('inkstream-chat-btn');
+    var panel = document.getElementById('inkstream-chat-panel');
+    if (!btn) return;
+    var hide = isLibraryPage();
+    btn.style.display = hide ? 'none' : '';
+    if (hide && panel) panel.style.display = 'none';
+  }
+
   function start() {
     fixTextNodes(document.body);
     bodyObserver.observe(document.body, { childList: true, subtree: true });
@@ -256,7 +242,7 @@
       try { addChatWidget(); } catch (e) {}
       if (location.pathname !== lastPath) {
         lastPath = location.pathname;
-        updateDiscoverButtonVisibility();
+        updateChatWidgetVisibility();
       }
       var chapterTabActive = isChapterTabActive();
       if (chapterTabActive && !wasChapterTabActive) {
@@ -265,9 +251,9 @@
       }
       wasChapterTabActive = chapterTabActive;
     }, 300);
-    updateDiscoverButtonVisibility();
     addGridSidebarLink();
     addChatWidget();
+    updateChatWidgetVisibility();
   }
 
   if (document.body) start();
