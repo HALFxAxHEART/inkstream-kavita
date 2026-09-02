@@ -116,7 +116,9 @@
   // source search, so this one button covers both "is it here" and "find it
   // for me" without the user needing to pick which button to press.
   var ASSISTANT_URL = 'https://inkstream-assistant.stapulasolutions.com';
-  var chatHistory = [];
+  // Conversation continuity now lives server-side (Gemini's own interaction
+  // chaining) - we just remember the last interaction id and hand it back.
+  var lastInteractionId = null;
 
   function getKavitaToken() {
     try {
@@ -194,7 +196,6 @@
       }
       input.value = '';
       addBubble(text, 'user');
-      chatHistory.push({ role: 'user', content: text });
 
       // Status bubble shows real progress from the server (streamed, not a
       // guess) - a vibe-based discovery search runs a local model on CPU
@@ -231,13 +232,15 @@
           var pending = document.getElementById('inkstream-chat-status');
           if (pending) pending.remove();
           addBubble(evt.text || 'Something went wrong, try again.', 'assistant');
+        } else if (evt.type === 'meta') {
+          lastInteractionId = evt.interactionId;
         }
       }
 
       fetch(ASSISTANT_URL + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ message: text, history: chatHistory.slice(0, -1) })
+        body: JSON.stringify({ message: text, previousInteractionId: lastInteractionId })
       })
         .then(function (res) {
           if (!res.ok || !res.body) throw new Error('bad response');
@@ -248,7 +251,6 @@
           function pump() {
             return reader.read().then(function (result) {
               if (result.done) {
-                if (replyText) chatHistory.push({ role: 'assistant', content: replyText });
                 var leftoverStatus = document.getElementById('inkstream-chat-status');
                 if (leftoverStatus) leftoverStatus.remove();
                 return;
