@@ -195,7 +195,28 @@
       input.value = '';
       addBubble(text, 'user');
       chatHistory.push({ role: 'user', content: text });
-      addBubble('...', 'assistant-pending');
+
+      // A vibe-based discovery search runs a local model on CPU plus a real
+      // lookup - it can take a while (a minute isn't unusual). Cycling text
+      // makes clear it's actually working, not stuck, since there's nothing
+      // faster to show progress with here.
+      var pendingEl = document.createElement('div');
+      pendingEl.id = 'inkstream-chat-pending';
+      pendingEl.style.cssText = 'align-self:flex-start;background:#353535;color:#aaa;padding:.5rem .75rem;border-radius:.75rem;font-style:italic';
+      var pendingMessages = ['Thinking...', 'Searching the library...', 'Looking through titles...', 'Still working on it...'];
+      var pendingIdx = 0;
+      pendingEl.textContent = pendingMessages[0];
+      document.getElementById('inkstream-chat-log').appendChild(pendingEl);
+      var pendingTimer = setInterval(function () {
+        pendingIdx = (pendingIdx + 1) % pendingMessages.length;
+        pendingEl.textContent = pendingMessages[pendingIdx];
+      }, 4000);
+
+      function clearPending() {
+        clearInterval(pendingTimer);
+        var el = document.getElementById('inkstream-chat-pending');
+        if (el) el.remove();
+      }
 
       fetch(ASSISTANT_URL + '/api/chat', {
         method: 'POST',
@@ -204,15 +225,13 @@
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          var pending = document.querySelector('#inkstream-chat-log div:last-child');
-          if (pending && pending.textContent === '...') pending.remove();
+          clearPending();
           var reply = data.reply || data.error || 'Something went wrong, try again.';
           addBubble(reply, 'assistant');
           chatHistory.push({ role: 'assistant', content: reply });
         })
         .catch(function () {
-          var pending = document.querySelector('#inkstream-chat-log div:last-child');
-          if (pending && pending.textContent === '...') pending.remove();
+          clearPending();
           addBubble('Assistant is unavailable right now.', 'assistant');
         });
     });
