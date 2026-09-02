@@ -196,26 +196,42 @@
       addBubble(text, 'user');
       chatHistory.push({ role: 'user', content: text });
 
-      // A vibe-based discovery search runs a local model on CPU plus a real
-      // lookup - it can take a while (a minute isn't unusual). Cycling text
-      // makes clear it's actually working, not stuck, since there's nothing
-      // faster to show progress with here.
-      var pendingEl = document.createElement('div');
-      pendingEl.id = 'inkstream-chat-pending';
-      pendingEl.style.cssText = 'align-self:flex-start;background:#353535;color:#aaa;padding:.5rem .75rem;border-radius:.75rem;font-style:italic';
-      var pendingMessages = ['Thinking...', 'Searching the library...', 'Looking through titles...', 'Still working on it...'];
-      var pendingIdx = 0;
-      pendingEl.textContent = pendingMessages[0];
-      document.getElementById('inkstream-chat-log').appendChild(pendingEl);
-      var pendingTimer = setInterval(function () {
-        pendingIdx = (pendingIdx + 1) % pendingMessages.length;
-        pendingEl.textContent = pendingMessages[pendingIdx];
-      }, 4000);
+      // Status bubble shows real progress from the server (streamed, not a
+      // guess) - a vibe-based discovery search runs a local model on CPU
+      // plus a real lookup, which can take a while.
+      var statusEl = document.createElement('div');
+      statusEl.id = 'inkstream-chat-status';
+      statusEl.style.cssText = 'align-self:flex-start;background:#353535;color:#aaa;padding:.5rem .75rem;border-radius:.75rem;font-style:italic';
+      statusEl.textContent = 'Thinking...';
+      document.getElementById('inkstream-chat-log').appendChild(statusEl);
 
-      function clearPending() {
-        clearInterval(pendingTimer);
-        var el = document.getElementById('inkstream-chat-pending');
+      var replyEl = null;
+      var replyText = '';
+
+      function ensureReplyBubble() {
+        if (replyEl) return;
+        var el = document.getElementById('inkstream-chat-status');
         if (el) el.remove();
+        replyEl = document.createElement('div');
+        replyEl.style.cssText = 'max-width:85%;padding:.5rem .75rem;border-radius:.75rem;white-space:pre-wrap;align-self:flex-start;background:#353535;color:#efefef';
+        document.getElementById('inkstream-chat-log').appendChild(replyEl);
+      }
+
+      function handleEvent(evt) {
+        var log = document.getElementById('inkstream-chat-log');
+        if (evt.type === 'status') {
+          var el = document.getElementById('inkstream-chat-status');
+          if (el) el.textContent = evt.text;
+        } else if (evt.type === 'token') {
+          ensureReplyBubble();
+          replyText += evt.text;
+          replyEl.textContent = replyText;
+          log.scrollTop = log.scrollHeight;
+        } else if (evt.type === 'error') {
+          var pending = document.getElementById('inkstream-chat-status');
+          if (pending) pending.remove();
+          addBubble(evt.text || 'Something went wrong, try again.', 'assistant');
+        }
       }
 
       fetch(ASSISTANT_URL + '/api/chat', {
@@ -223,16 +239,36 @@
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({ message: text, history: chatHistory.slice(0, -1) })
       })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          clearPending();
-          var reply = data.reply || data.error || 'Something went wrong, try again.';
-          addBubble(reply, 'assistant');
-          chatHistory.push({ role: 'assistant', content: reply });
+        .then(function (res) {
+          if (!res.ok || !res.body) throw new Error('bad response');
+          var reader = res.body.getReader();
+          var decoder = new TextDecoder();
+          var buffer = '';
+
+          function pump() {
+            return reader.read().then(function (result) {
+              if (result.done) {
+                if (replyText) chatHistory.push({ role: 'assistant', content: replyText });
+                var leftoverStatus = document.getElementById('inkstream-chat-status');
+                if (leftoverStatus) leftoverStatus.remove();
+                return;
+              }
+              buffer += decoder.decode(result.value, { stream: true });
+              var lines = buffer.split('\n');
+              buffer = lines.pop();
+              lines.forEach(function (line) {
+                if (!line.trim()) return;
+                try { handleEvent(JSON.parse(line)); } catch (e) {}
+              });
+              return pump();
+            });
+          }
+          return pump();
         })
         .catch(function () {
-          clearPending();
-          addBubble('Assistant is unavailable right now.', 'assistant');
+          var el = document.getElementById('inkstream-chat-status');
+          if (el) el.remove();
+          if (!replyText) addBubble('Assistant is unavailable right now.', 'assistant');
         });
     });
   }
