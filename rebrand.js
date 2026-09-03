@@ -249,7 +249,16 @@
         body: JSON.stringify({ message: text, previousInteractionId: lastInteractionId })
       })
         .then(function (res) {
-          if (!res.ok || !res.body) throw new Error('bad response');
+          if (!res.ok) {
+            // Surface the real reason (e.g. "slow down - try again in a
+            // bit") instead of a generic message that gives no clue what
+            // actually happened.
+            return res.json().then(
+              function (data) { throw new Error(data && data.error ? data.error : 'request failed'); },
+              function () { throw new Error('request failed'); }
+            );
+          }
+          if (!res.body) throw new Error('bad response');
           var reader = res.body.getReader();
           var decoder = new TextDecoder();
           var buffer = '';
@@ -273,10 +282,15 @@
           }
           return pump();
         })
-        .catch(function () {
+        .catch(function (err) {
           var el = document.getElementById('inkstream-chat-status');
           if (el) el.remove();
-          if (!replyText) addBubble('Assistant is unavailable right now.', 'assistant');
+          if (!replyText) {
+            var msg = (err && err.message && err.message !== 'bad response' && err.message !== 'request failed')
+              ? err.message
+              : 'Assistant is unavailable right now — try again in a moment.';
+            addBubble(msg, 'assistant');
+          }
         })
         .finally(function () {
           requestInFlight = false;

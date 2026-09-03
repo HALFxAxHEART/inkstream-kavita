@@ -13,7 +13,7 @@ COPY icons/logo-32.png /kavita/wwwroot/assets/images/logo-32.png
 # fix to custom-theme.css/rebrand.js could take up to a day to reach an
 # installed PWA. ASSET_VERSION busts that - bump it on every change to
 # either file so browsers are forced to fetch the new copy immediately.
-ARG ASSET_VERSION=12
+ARG ASSET_VERSION=13
 
 RUN sed -i 's/<title>Kavita<\/title>/<title>InkStream<\/title>/' /kavita/wwwroot/index.html && \
     sed -i 's/"name": "Kavita"/"name": "InkStream"/; s/"short_name": "Kavita"/"short_name": "InkStream"/' /kavita/wwwroot/site.webmanifest && \
