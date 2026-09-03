@@ -224,19 +224,55 @@
         document.getElementById('inkstream-chat-log').appendChild(replyEl);
       }
 
+      // Escape first, THEN turn **bold** into <strong> - order matters so
+      // markup in the model's own text can't inject real HTML.
+      function renderBoldSafe(raw) {
+        var div = document.createElement('div');
+        div.textContent = raw;
+        var escaped = div.innerHTML;
+        return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      }
+
+      function addCoverStrip(items) {
+        var log = document.getElementById('inkstream-chat-log');
+        var strip = document.createElement('div');
+        strip.style.cssText = 'display:flex;gap:.5rem;overflow-x:auto;align-self:flex-start;max-width:100%;padding-bottom:.25rem';
+        items.forEach(function (item) {
+          var card = document.createElement('div');
+          card.style.cssText = 'flex:0 0 auto;width:5rem;text-align:center';
+          var img = document.createElement('img');
+          img.src = item.coverUrl;
+          img.alt = item.title;
+          img.loading = 'lazy';
+          img.style.cssText = 'width:5rem;height:7.1rem;object-fit:cover;border-radius:.5rem;display:block;background:#353535';
+          var caption = document.createElement('div');
+          caption.textContent = item.title;
+          caption.style.cssText = 'font-size:.65rem;color:#aaa;margin-top:.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+          card.appendChild(img);
+          card.appendChild(caption);
+          strip.appendChild(card);
+        });
+        log.appendChild(strip);
+        log.scrollTop = log.scrollHeight;
+      }
+
       function handleEvent(evt) {
         var log = document.getElementById('inkstream-chat-log');
         if (evt.type === 'status') {
           var el = document.getElementById('inkstream-chat-status');
           if (el) el.textContent = evt.text;
+        } else if (evt.type === 'covers') {
+          var pending = document.getElementById('inkstream-chat-status');
+          if (pending) pending.remove();
+          if (evt.items && evt.items.length) addCoverStrip(evt.items);
         } else if (evt.type === 'token') {
           ensureReplyBubble();
           replyText += evt.text;
-          replyEl.textContent = replyText;
+          replyEl.innerHTML = renderBoldSafe(replyText);
           log.scrollTop = log.scrollHeight;
         } else if (evt.type === 'error') {
-          var pending = document.getElementById('inkstream-chat-status');
-          if (pending) pending.remove();
+          var pending2 = document.getElementById('inkstream-chat-status');
+          if (pending2) pending2.remove();
           addBubble(evt.text || 'Something went wrong, try again.', 'assistant');
         } else if (evt.type === 'meta') {
           lastInteractionId = evt.interactionId;
