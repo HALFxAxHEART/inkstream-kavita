@@ -128,6 +128,68 @@
     } catch (e) { return null; }
   }
 
+  // Kavita's own chapter CARD grid has no built-in "read = grayed out" look
+  // (confirmed: only the series-level progress bar reflects read state,
+  // individual chapter cards don't) - this fills that gap using the same
+  // pagesRead/pages data Kavita already tracks per chapter, just not
+  // surfaced visually on the cards.
+  var readStateCache = { seriesId: null, at: 0, map: null };
+
+  function currentSeriesId() {
+    var m = location.pathname.match(/\/series\/(\d+)/);
+    return m ? m[1] : null;
+  }
+
+  function fetchReadState(seriesId, token) {
+    return fetch('/api/series/volumes?seriesId=' + seriesId, {
+      headers: { Authorization: 'Bearer ' + token }
+    })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (volumes) {
+        var map = {};
+        (volumes || []).forEach(function (vol) {
+          (vol.chapters || []).forEach(function (ch) {
+            map[ch.id] = ch.pages > 0 && ch.pagesRead >= ch.pages;
+          });
+        });
+        return map;
+      })
+      .catch(function () { return {}; });
+  }
+
+  function applyReadChapterStyling() {
+    var seriesId = currentSeriesId();
+    if (!seriesId) return;
+    var token = getKavitaToken();
+    if (!token) return;
+
+    var now = Date.now();
+    var needsFetch = readStateCache.seriesId !== seriesId || now - readStateCache.at > 15000;
+    if (needsFetch) {
+      readStateCache.seriesId = seriesId;
+      readStateCache.at = now;
+      fetchReadState(seriesId, token).then(function (map) {
+        readStateCache.map = map;
+        paintCards(map);
+      });
+      return;
+    }
+    if (readStateCache.map) paintCards(readStateCache.map);
+  }
+
+  function paintCards(map) {
+    var imgs = document.querySelectorAll('img[src*="chapter-cover"]');
+    imgs.forEach(function (img) {
+      var m = img.src.match(/chapterId=(\d+)/);
+      if (!m) return;
+      var isRead = !!map[m[1]];
+      var card = img.closest('.card-item-container') || img.closest('.card');
+      if (!card) return;
+      card.style.filter = isRead ? 'grayscale(0.85) brightness(0.6)' : '';
+      card.style.transition = 'filter .2s ease';
+    });
+  }
+
   function addChatWidget() {
     if (document.getElementById('inkstream-chat-btn')) return;
 
@@ -359,6 +421,7 @@
     setInterval(function () {
       try { addGridSidebarLink(); } catch (e) {}
       try { addChatWidget(); } catch (e) {}
+      try { applyReadChapterStyling(); } catch (e) {}
       if (location.pathname !== lastPath) {
         lastPath = location.pathname;
         updateChatWidgetVisibility();
